@@ -1,5 +1,4 @@
 from __future__ import annotations
-import argparse
 from pathlib import Path
 import sys
 import time
@@ -47,26 +46,51 @@ def fetch_year_report_api(year: int) -> dict | None:
     except Exception as e:
         print(f"API error for {year}: {e}", file=sys.stderr)
         return None
-# --------- end API layer ----------
 
-def results_functionality(df: pd.DataFrame, start_y: int, end_y: int, ): # void function
-    main functionality
-    loop through years
-    in each loop check if the df has the year and if it does then simply pull the report,
-    if the csv doesnt have then call the api function
+def results_functionality(df: pd.DataFrame, start_y: int, end_y: int) -> None:
+    by_year = df.set_index("year")
 
-    we can append all results of years in range to a list, and then after the loop we can basically create a new csv using pandas with said data. and we will export to the result.csv, to outpiut dir "Results"
+    rows = []
+    for year in range(start_y, end_y + 1):
+
+        if year in by_year.index:
+            s = by_year.loc[year]
+            rec = {
+                "year": int(year),
+                "revenue": float(s["revenue"]),
+                "profit": float(s["profit"]),
+                "cost": float(s["cost"]),
+                "price": float(s["price"]),
+            }
+        else:
+   
+            rec = fetch_year_report_api(year)
+            if rec is None:
+                print(f"No data available for {year}, skipping.", file=sys.stderr)
+                continue
+
+        rows.append(rec)
+        time.sleep(0.05)  
+
+    if not rows:
+        print("No rows to write for the requested range.")
+        return
+
+    out_df = (
+        pd.DataFrame(rows, columns=REQUIRED_COLS)
+          .sort_values("year")
+          .reset_index(drop=True)
+    )
+
+    out_dir = Path("Results")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "result.csv"
+    out_df.to_csv(out_path, index=False)
+    print(f"Wrote {out_path} with {len(out_df)} rows")
 
 def main():
-    ap = argparse.ArgumentParser(description="Fill missing years in a CSV by calling an API for each missing year.")
-    ap.add_argument("--csv-in", default="data.csv", help="input CSV path")
-    ap.add_argument("--csv-out", default="data_filled.csv", help="output CSV path")
-    ap.add_argument("--start", type=int, help="start year, inclusive")
-    ap.add_argument("--end", type=int, help="end year, inclusive")
-    ap.add_argument("--use-real-api", action="store_true", help="call the real API function instead of simulated data")
-    args = ap.parse_args()
 
-    print("Welcome to the Pharma Report Analysit Tool")
+    print("Welcome to the Pharma Report Analysis Tool")
 
     start, end = ask_years()
     # asks for year ranges
