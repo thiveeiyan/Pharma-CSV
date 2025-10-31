@@ -28,9 +28,9 @@ def ask_years():
 
 def fetch_year_report_api(year: int) -> dict | None:
 
-    url = f"https://pharamapi.com/financialReport/{year}"
+    url = f"https://pharamapi.onrender.com/financialReport/{year}"
     try:
-        r = requests.get(url, params=params, timeout=15)
+        r = requests.get(url, timeout=15)
         r.raise_for_status()
         j = r.json()
         if not j:
